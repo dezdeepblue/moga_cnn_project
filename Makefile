@@ -10,8 +10,14 @@ test:
 smoke:
 	python -m src.pipeline --results-dir results_smoke --pop-size 4 --ngen 1 --eval-epochs 1 --num-seeds 1 --baseline-epochs 1 --baseline-max-combos 3 --retrain-epochs 1 --retrain-seeds 1 --retrain-k-each 1
 
+smoke-cuda:
+	python -m src.pipeline --device cuda --results-dir results_smoke_cuda --pop-size 4 --ngen 1 --eval-epochs 1 --num-seeds 1 --baseline-epochs 1 --baseline-max-combos 3 --retrain-epochs 1 --retrain-seeds 1 --retrain-k-each 1
+
 quick:
 	python -m src.pipeline --results-dir results_quick --pop-size 8 --ngen 2 --eval-epochs 1 --num-seeds 1 --retrain-epochs 3 --retrain-seeds 1 --copy-to-report
+
+quick-cuda:
+	python -m src.pipeline --device cuda --results-dir results_quick_cuda --pop-size 8 --ngen 2 --eval-epochs 1 --num-seeds 1 --retrain-epochs 3 --retrain-seeds 1 --copy-to-report
 
 full:
 	python -m src.pipeline --results-dir results --pop-size 24 --ngen 8 --eval-epochs 6 --num-seeds 3 --transfer-dataset cifar100 --retrain-epochs 50 --retrain-seeds 3 --copy-to-report
@@ -22,8 +28,14 @@ full-cuda:
 budget5:
 	python -m src.pipeline --results-dir results_budget5 --pop-size 24 --ngen 8 --eval-epochs 5 --num-seeds 3 --transfer-dataset cifar100 --retrain-epochs 50 --retrain-seeds 3 --copy-to-report
 
+budget5-cuda:
+	python -m src.pipeline --device cuda --results-dir results_budget5_cuda --pop-size 24 --ngen 8 --eval-epochs 5 --num-seeds 3 --transfer-dataset cifar100 --retrain-epochs 50 --retrain-seeds 3 --copy-to-report	
+
 budget15:
 	python -m src.pipeline --results-dir results_budget15 --pop-size 24 --ngen 8 --eval-epochs 15 --num-seeds 3 --transfer-dataset cifar100 --retrain-epochs 50 --retrain-seeds 3 --copy-to-report
+
+budget15-cuda:
+	python -m src.pipeline --device cuda --results-dir results_budget15_cuda --pop-size 24 --ngen 8 --eval-epochs 15 --num-seeds 3 --transfer-dataset cifar100 --retrain-epochs 50 --retrain-seeds 3 --copy-to-report
 
 plots:
 	python -m src.plots --results-dir results --transfer-dataset cifar100
