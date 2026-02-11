@@ -1,0 +1,10 @@
+
+torch
+torchvision
+numpy
+pandas
+deap
+thop
+scikit-learn
+matplotlib
+pytest
