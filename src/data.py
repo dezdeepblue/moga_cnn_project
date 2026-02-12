@@ -3,7 +3,22 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, random_split
 import torch
 
-def cifar10_loaders(batch_size=128, val_size=5000, num_workers=2, seed=0):
+_CIFAR10_LOADERS_CACHE = {}
+
+def cifar10_loaders(
+    batch_size=128,
+    val_size=5000,
+    num_workers=2,
+    seed=0,
+    data_root="./data",
+    pin_memory=None,
+    persistent_workers=True,
+    use_cache=True,
+):
+    key = (batch_size, val_size, num_workers, seed, data_root)
+    if use_cache and key in _CIFAR10_LOADERS_CACHE:
+        return _CIFAR10_LOADERS_CACHE[key]
+
     tfm_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
@@ -16,15 +31,28 @@ def cifar10_loaders(batch_size=128, val_size=5000, num_workers=2, seed=0):
     ])
 
     print("[DATA] Preparing CIFAR-10 dataset (download may take time on first run)...", flush=True)
-    ds = datasets.CIFAR10(root="./data", train=True, download=True, transform=tfm_train)
+    ds = datasets.CIFAR10(root=data_root, train=True, download=True, transform=tfm_train)
     train_ds, val_ds = random_split(ds, [len(ds)-val_size, val_size],
                                     generator=torch.Generator().manual_seed(seed))
     val_ds.dataset.transform = tfm_test
 
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    if pin_memory is None:
+        pin_memory = torch.cuda.is_available()
+
+    loader_kwargs = {
+        "batch_size": batch_size,
+        "num_workers": num_workers,
+        "pin_memory": pin_memory,
+    }
+    if num_workers > 0:
+        loader_kwargs["persistent_workers"] = persistent_workers
+
+    train_loader = DataLoader(train_ds, shuffle=True, **loader_kwargs)
+    val_loader = DataLoader(val_ds, shuffle=False, **loader_kwargs)
     print(
         f"[DATA] CIFAR-10 ready | train={len(train_ds)} | val={len(val_ds)} | batch_size={batch_size}",
         flush=True,
     )
+    if use_cache:
+        _CIFAR10_LOADERS_CACHE[key] = (train_loader, val_loader)
     return train_loader, val_loader

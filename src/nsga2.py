@@ -33,12 +33,30 @@ def _progress_bar(done: int, total: int, width: int = 30) -> str:
     filled = int(width * ratio)
     return f"[{'#' * filled}{'.' * (width - filled)}] {done}/{total} ({ratio * 100:5.1f}%)"
 
-def evaluate_individual(ind, epochs=6, batch_size=128, val_size=5000, device="cpu", seed=0, progress_label=None):
+def _canonical_chrom_json(ind) -> str:
+    return json.dumps(repair(dict(ind)), sort_keys=True, separators=(",", ":"))
+
+def evaluate_individual(
+    ind,
+    epochs=6,
+    batch_size=128,
+    val_size=5000,
+    num_workers=2,
+    device="cpu",
+    seed=0,
+    progress_label=None,
+):
     random.seed(seed)
     import torch
     torch.manual_seed(seed)
 
-    train_loader, val_loader = cifar10_loaders(batch_size=batch_size, val_size=val_size, seed=seed)
+    train_loader, val_loader = cifar10_loaders(
+        batch_size=batch_size,
+        val_size=val_size,
+        num_workers=num_workers,
+        seed=seed,
+        use_cache=True,
+    )
     model = CNNFromChromosome(ind, num_classes=10)
     params = count_params(model)
     flops = compute_flops(model, device=device)
@@ -75,6 +93,7 @@ def run_nsga2(
     epochs=6,
     batch_size=128,
     val_size=5000,
+    num_workers=2,
     device="cpu",
     seed=0,
     log_dir: Optional[str] = None,
@@ -89,6 +108,10 @@ def run_nsga2(
     if run_id is None:
         run_id = f"nsga2_seed{seed}_{int(time.time())}"
 
+    if device.startswith("cuda"):
+        import torch
+        torch.backends.cudnn.benchmark = True
+
     log_jsonl = None
     if log_dir:
         _ensure_dir(os.path.join(log_dir, run_id))
@@ -102,6 +125,7 @@ def run_nsga2(
             "epochs": epochs,
             "batch_size": batch_size,
             "val_size": val_size,
+            "num_workers": num_workers,
             "device": device,
             "started_at": time.time(),
         }
@@ -110,15 +134,38 @@ def run_nsga2(
         log_jsonl = os.path.join(log_dir, run_id, "log.jsonl")
 
     pop = toolbox.population(n=pop_size)
+    fitness_cache = {}
+    cache_hits = 0
+
+    def eval_with_cache(ind, label):
+        nonlocal cache_hits
+        key = _canonical_chrom_json(ind)
+        cached = fitness_cache.get(key)
+        if cached is not None:
+            cache_hits += 1
+            ind.fitness.values = cached
+            return
+
+        fit = evaluate_individual(
+            ind,
+            epochs=epochs,
+            batch_size=batch_size,
+            val_size=val_size,
+            num_workers=num_workers,
+            device=device,
+            seed=seed,
+            progress_label=label,
+        )
+        fitness_cache[key] = fit
+        ind.fitness.values = fit
+
     total_evals = pop_size * (ngen + 1)
     eval_done = 0
     print(f"[NSGA2] Seed={seed} | population={pop_size} | generations={ngen} | total evaluations={total_evals}")
     print(f"[NSGA2] Initial population evaluation: {_progress_bar(eval_done, total_evals)}", flush=True)
     t0 = time.time()
     for idx, ind in enumerate(pop, start=1):
-        ind.fitness.values = evaluate_individual(
-            ind, epochs, batch_size, val_size, device, seed, progress_label=f"seed{seed} init ind {idx}/{pop_size}"
-        )
+        eval_with_cache(ind, label=f"seed{seed} init ind {idx}/{pop_size}")
         eval_done += 1
         print(
             f"\r[NSGA2] Initial population evaluation: {_progress_bar(eval_done, total_evals)}",
@@ -159,9 +206,7 @@ def run_nsga2(
                 offspring[i+1].update(mutate(dict(offspring[i+1]), p=mut_prob))
 
         for idx, ind in enumerate(offspring, start=1):
-            ind.fitness.values = evaluate_individual(
-                ind, epochs, batch_size, val_size, device, seed, progress_label=f"seed{seed} gen{gen} ind {idx}/{len(offspring)}"
-            )
+            eval_with_cache(ind, label=f"seed{seed} gen{gen} ind {idx}/{len(offspring)}")
             eval_done += 1
             print(
                 f"\r[NSGA2] Overall evaluations: {_progress_bar(eval_done, total_evals)}",
@@ -177,6 +222,8 @@ def run_nsga2(
             f"[NSGA2] Generation {gen}/{ngen} done | front_size={len(front)} | best_acc={gen_best_acc:.4f} | gen_time={time.time() - g0:.1f}s",
             flush=True,
         )
+        if cache_hits:
+            print(f"[NSGA2] Fitness cache hits so far: {cache_hits}", flush=True)
 
         if log_dir and checkpoint_every and gen % checkpoint_every == 0:
             _save_checkpoint(log_dir, run_id, gen, pop, front)
@@ -199,6 +246,9 @@ def run_nsga2(
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta, f, indent=2)
 
-    print(f"[NSGA2] Seed={seed} completed in {time.time() - t0:.1f}s", flush=True)
+    print(
+        f"[NSGA2] Seed={seed} completed in {time.time() - t0:.1f}s | cache_hits={cache_hits}",
+        flush=True,
+    )
 
     return pop, front, run_id
