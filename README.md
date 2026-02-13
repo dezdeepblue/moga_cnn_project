@@ -1,13 +1,11 @@
-# Multi-objective GA for CNN Architecture + Training Strategy (NSGA-II)
+# Multi-Objective GA CNN Project (NSGA-II)
 
-Course project implementing NSGA-II to jointly optimize:
-- CIFAR-10 validation accuracy (maximize)
-- Parameter count (minimize)
-- FLOPs (minimize)
+This project uses NSGA-II to jointly optimize CNN architecture and training strategy on CIFAR-10 with three objectives:
+- maximize validation accuracy
+- minimize parameter count
+- minimize FLOPs
 
-The chromosome encodes both architecture and training strategy.
-
-## Quick start
+## Setup
 ```bash
 python -m venv .venv
 # Windows
@@ -17,101 +15,56 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Fast sanity runs
+## Run the pipeline
+Main entry point:
 ```bash
-make smoke
-make quick
+python -m src.pipeline --results-dir results --auto-device
 ```
 
-## Full run
-```bash
-make full
-```
-
-## Pipeline stages and resume support
-`src/pipeline.py` now supports stage-by-stage execution and resume-safe reruns.
-
-Stages:
+Pipeline stages (1-8):
 1. NSGA-II search
-2. Stability metrics
-3. Manual baseline
+2. Stability metrics (HV, IGD)
+3. Manual baseline grid
 4. Transfer retraining
 5. Plots
 6. Architecture diagrams
-7. Copy report assets (optional, requires `--copy-to-report`)
-8. Report fragments and markdown
+7. Copy report assets (`--copy-to-report`)
+8. Report fragments + markdown
 
-State is saved in:
-- `results*/pipeline_state.json`
+Useful controls:
+- `--resume`: skip completed stages listed in `pipeline_state.json`
+- `--skip-existing`: skip stages when expected output already exists
+- `--start-stage N --end-stage M`: run only a stage range
 
-Use:
-- `--resume` to skip completed stages from `pipeline_state.json`
-- `--skip-existing` to skip heavy stages when output files already exist
-- `--start-stage N --end-stage M` to run a subset of stages
+## Run configs
+`Makefile` defines standard presets:
 
-### Colab-friendly step execution
-```bash
-# Stage 1 only (longest stage)
-python -m src.pipeline --results-dir results_colab --auto-device --start-stage 1 --end-stage 1
+- `make smoke`: minimal sanity test for wiring and outputs. Fastest run, tiny population, 1 generation, 1 epoch, reduced baseline and retrain work.
+- `make quick`: short experimental run for iteration. Small population/generation counts, cheap eval budget, includes report asset copy.
+- `make full`: main report-quality run on CPU defaults (larger search, multi-seed stability, longer retraining on CIFAR-100).
+- `make budget5`: same structure as `full` but with `--eval-epochs 5` to test lower fitness-evaluation budget sensitivity.
+- `make budget15`: same structure as `full` but with `--eval-epochs 15` to test higher fitness-evaluation budget sensitivity.
 
-# Continue later
-python -m src.pipeline --results-dir results_colab --auto-device --resume --skip-existing --start-stage 2 --end-stage 4
+CUDA variants are also provided (`smoke-cuda`, `quick-cuda`, `full-cuda`, `budget5-cuda`, `budget15-cuda`).
 
-# Finish plots/report
-python -m src.pipeline --results-dir results_colab --auto-device --resume --skip-existing --start-stage 5 --end-stage 8 --copy-to-report
-```
-
-## Performance tuning options
-Main runtime-related flags:
-- `--auto-device` (use CUDA automatically when available)
-- `--batch-size` (default: 128)
-- `--num-workers` (default: 2)
-- `--val-size` (default: 5000)
-- `--checkpoint-every` (NSGA-II checkpoint interval, default: 1 generation)
-
-Example:
-```bash
-python -m src.pipeline \
-  --results-dir results_fast \
-  --auto-device \
-  --batch-size 256 \
-  --num-workers 2 \
-  --eval-epochs 4 \
-  --baseline-epochs 4 \
-  --retrain-epochs 20
-```
-
-## Outputs (in `results*/`)
+## Outputs
+Key files under `results*/`:
 - `pareto_seed*.csv`, `pareto_all.csv`
 - `stability_hv2d.csv`, `stability_igd.csv`
 - `manual_baseline.csv`
-- `retrain_cifar100.csv` or `retrain_fashionmnist.csv`
-- `figures/*.png`
-- `logs/<run_id>/run_meta.json`
-- `logs/<run_id>/log.jsonl`
-- `logs/<run_id>/checkpoints/gen_XXXX.pkl`
-
-## Report assets
-With `--copy-to-report`, figures/tables are copied to:
-- `report/figures/`
-
-Generate report fragments:
-```bash
-make report-tex
-```
-
-Compile PDF (requires `pdflatex`):
-```bash
-make report-pdf
-```
-
-## Budget sensitivity (Q7)
-```bash
-make budget5
-make budget15
-```
+- `retrain_<dataset>.csv`
+- `figures/*.png`, `figures/*.csv`, `figures/*.txt`
+- `logs/<run_id>/run_meta.json`, `logs/<run_id>/log.jsonl`, `logs/<run_id>/checkpoints/gen_XXXX.pkl`
 
 ## Tests
 ```bash
 make test
 ```
+
+## Report helpers
+```bash
+make report-tex
+make report-pdf
+```
+
+For detailed code walkthrough, see `DESCRIPTION.md`.

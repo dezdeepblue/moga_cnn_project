@@ -1,0 +1,2 @@
+{"gen": 0, "elapsed_s": 62.10528826713562, "front_size": 2, "best_acc": 0.4754, "mean_acc": 0.34955}
+{"gen": 1, "elapsed_s": 51.99126100540161, "front_size": 4, "best_acc": 0.56, "mean_acc": 0.40230000000000005}

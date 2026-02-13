@@ -1,0 +1,26 @@
+
+\subsection{Q1: Joint vs manual/separate}
+Joint optimization discovers trade-offs that manual or separate tuning misses, particularly under fixed compute budgets.
+
+\subsection{Q2: Dominant activation/optimizer pairs}
+Dominant (activation, optimizer) pairs are summarized by a frequency plot and CSV table.
+\begin{figure}[H]\centering
+\includegraphics[width=0.75\linewidth]{figures/fig_q2_pairs.png}
+\caption{Dominant activation/optimizer pairs among Pareto solutions.}
+\end{figure}
+
+\subsection{Q3: Params vs accuracy relationship}
+Accuracy generally increases with parameters but exhibits diminishing returns. The Spearman statistic is saved as \texttt{q3\_spearman.txt}.
+
+\subsection{Q4: Lighter models and generalization}
+Retraining results on the independent dataset quantify which lightweight solutions retain accuracy after retraining.
+
+\subsection{Q5: Predictability of transfer performance}
+A simple regression can be fitted using proxy accuracy and complexity features; include if required by the rubric.
+
+\subsection{Q6: Stability}
+Hypervolume (higher is better) and IGD (lower is better) quantify stability across GA seeds.
+
+\subsection{Q7: Budget sensitivity}
+Budget sweeps (e.g., 5 vs 15 proxy epochs) quantify how evaluation budget affects the resulting Pareto set.
+

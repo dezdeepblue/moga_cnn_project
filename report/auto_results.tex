@@ -1,0 +1,25 @@
+\begin{figure}[H]\centering
+\includegraphics[width=0.49\linewidth]{figures/fig_acc_params.png}
+\includegraphics[width=0.49\linewidth]{figures/fig_acc_flops.png}
+\caption{Pareto projections: accuracy vs parameters and FLOPs.}
+\end{figure}
+
+\begin{figure}[H]\centering
+\includegraphics[width=0.75\linewidth]{figures/fig_overlay_fronts.png}
+\caption{Overlay of Pareto fronts across GA seeds.}
+\end{figure}
+
+\begin{table}[H]\centering
+\begin{tabular}{lrrrlll}
+\toprule
+Tag & Acc & Params & FLOPs & Act & Opt & lr \\
+\midrule
+min\_params & 0.2114 & 29,738 & 29,721,536 & gelu & sgd & 1.74e-04 \\
+min\_flops & 0.2114 & 29,738 & 29,721,536 & gelu & sgd & 1.74e-04 \\
+max\_acc & 0.5600 & 289,034 & 79,766,464 & leaky\_relu & adam & 7.16e-03 \\
+knee & 0.5600 & 289,034 & 79,766,464 & leaky\_relu & adam & 7.16e-03 \\
+\bottomrule
+\end{tabular}
+\caption{Representative Pareto solutions.}
+\end{table}
+

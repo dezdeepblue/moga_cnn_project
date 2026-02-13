@@ -1,0 +1,5 @@
+acc,params,flops,n_conv,use_bn,dropout,activation,optimizer,lr,chrom_json,seed
+0.56,289034,79766464,6,True,0.4,leaky_relu,adam,0.007163198564812189,"{""n_conv"": 6, ""filters"": [128, 32, 96, 64, 64, 96], ""kernels"": [5, 3, 3, 3, 5, 3], ""use_bn"": true, ""dropout"": 0.4, ""activation"": ""leaky_relu"", ""optimizer"": ""adam"", ""lr"": 0.007163198564812189}",0
+0.4754,221322,69567104,5,True,0.2,leaky_relu,sgd,0.007163198564812189,"{""n_conv"": 5, ""filters"": [64, 16, 48, 96, 64], ""kernels"": [5, 5, 5, 5, 3], ""use_bn"": true, ""dropout"": 0.2, ""activation"": ""leaky_relu"", ""optimizer"": ""sgd"", ""lr"": 0.007163198564812189}",0
+0.3624,30650,31129760,2,False,0.2,gelu,rmsprop,0.0009453945366865153,"{""n_conv"": 2, ""filters"": [64, 16], ""kernels"": [5, 5], ""use_bn"": false, ""dropout"": 0.2, ""activation"": ""gelu"", ""optimizer"": ""rmsprop"", ""lr"": 0.0009453945366865153}",0
+0.2114,29738,29721536,2,True,0.4,gelu,sgd,0.00017431608187606286,"{""n_conv"": 2, ""filters"": [32, 96], ""kernels"": [3, 3], ""use_bn"": true, ""dropout"": 0.4, ""activation"": ""gelu"", ""optimizer"": ""sgd"", ""lr"": 0.00017431608187606286}",0

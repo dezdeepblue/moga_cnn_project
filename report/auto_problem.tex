@@ -1,0 +1,11 @@
+
+\subsection{Chromosome}
+The chromosome encodes architecture and training strategy:
+$n_{conv}\in[2,6]$, filters $\in\{16,32,48,64,96,128\}$, kernels $\in\{3,5\}$,
+BatchNorm (on/off), dropout $\in[0,0.5]$, activation $\in\{\text{ReLU, LeakyReLU, ELU, GELU}\}$,
+optimizer $\in\{\text{SGD, Adam, RMSprop}\}$, and learning rate $lr\in[10^{-4},10^{-1}]$ (log-uniform).
+
+\subsection{Objectives}
+We maximize CIFAR-10 validation accuracy and minimize parameters and FLOPs.
+Implementation uses minimization objectives $(-acc, params, flops)$.
+

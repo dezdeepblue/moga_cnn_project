@@ -1,0 +1,15 @@
+{
+  "run_id": "nsga2_seed0_1770822441",
+  "seed": 0,
+  "pop_size": 4,
+  "ngen": 1,
+  "cx_prob": 0.9,
+  "mut_prob": 0.2,
+  "epochs": 1,
+  "batch_size": 128,
+  "val_size": 5000,
+  "device": "cuda",
+  "started_at": 1770822441.8691316,
+  "finished_at": 1770822555.966587,
+  "duration_s": 114.0974555015564
+}

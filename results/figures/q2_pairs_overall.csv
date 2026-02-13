@@ -1,0 +1,5 @@
+activation,optimizer,count,share
+gelu,rmsprop,1,0.25
+gelu,sgd,1,0.25
+leaky_relu,adam,1,0.25
+leaky_relu,sgd,1,0.25

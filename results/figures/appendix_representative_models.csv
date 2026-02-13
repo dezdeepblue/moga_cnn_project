@@ -1,0 +1,5 @@
+rep_tag,acc,params,flops,n_conv,use_bn,dropout,activation,optimizer,lr
+min_params,0.2114,29738,29721536,2,True,0.4,gelu,sgd,0.000174316081876
+min_flops,0.2114,29738,29721536,2,True,0.4,gelu,sgd,0.000174316081876
+max_acc,0.56,289034,79766464,6,True,0.4,leaky_relu,adam,0.0071631985648121
+knee,0.56,289034,79766464,6,True,0.4,leaky_relu,adam,0.0071631985648121

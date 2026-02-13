@@ -1,0 +1,4 @@
+We use NSGA-II, which performs non-dominated sorting and maintains diversity via crowding distance.
+Selection uses tournament-DCD. Crossover swaps gene keys (uniform) and applies repair.
+Mutation perturbs genes independently and applies repair. Fitness evaluation decodes the chromosome into a CNN,
+computes parameters/FLOPs, trains for a proxy epoch budget, and measures validation accuracy.

@@ -1,0 +1,5 @@
+rep_tag,file
+min_params,fig_arch_min_params.png
+min_flops,fig_arch_min_flops.png
+max_acc,fig_arch_max_acc.png
+knee,fig_arch_knee.png

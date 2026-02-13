@@ -1,0 +1,4 @@
+acc,params,flops,activation,optimizer,lr
+0.263,131754,48661760,relu,sgd,0.0001
+0.3272,131754,48661760,relu,sgd,0.0003
+0.4202,131754,48661760,relu,sgd,0.001
