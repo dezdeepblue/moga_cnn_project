@@ -71,7 +71,16 @@ def hv_projections(all_df):
         rows.append({"seed": seed, "HV_acc_params": hv1, "HV_acc_flops": hv2})
     return pd.DataFrame(rows)
 
-def run_manual_baseline(outdir, device="cpu", seed=0, epochs=6, max_combos=None):
+def run_manual_baseline(
+    outdir,
+    device="cpu",
+    seed=0,
+    epochs=6,
+    batch_size=128,
+    val_size=5000,
+    num_workers=2,
+    max_combos=None,
+):
     ensure_dir(outdir)
     base = manual_cnn_chrom()
     activations = ["relu","elu","gelu"]
@@ -84,6 +93,9 @@ def run_manual_baseline(outdir, device="cpu", seed=0, epochs=6, max_combos=None)
         optimizers,
         lrs,
         epochs=epochs,
+        batch_size=batch_size,
+        val_size=val_size,
+        num_workers=num_workers,
         device=device,
         seed=seed,
         max_combos=max_combos,
@@ -96,6 +108,7 @@ def run_manual_baseline(outdir, device="cpu", seed=0, epochs=6, max_combos=None)
     print(f"[RUN_ALL] Baseline grid search complete ({len(rows)} combinations)", flush=True)
 
 def retrain_selected(all_df, outdir, dataset="cifar100", retrain_epochs=50,
+                    batch_size=128, val_size=5000, num_workers=2,
                     device="cpu", retrain_seeds=(0,1,2), k_each=3):
     ensure_dir(outdir)
     df = all_df.copy()
@@ -120,7 +133,18 @@ def retrain_selected(all_df, outdir, dataset="cifar100", retrain_epochs=50,
                 f"[RUN_ALL] Retrain pick {int(i)+1}/{len(picks)} on {dataset} | seed={s} | {done_jobs+1}/{total_jobs}",
                 flush=True,
             )
-            scores.append(retrain_and_eval(chrom, dataset=dataset, epochs=retrain_epochs, device=device, seed=s))
+            scores.append(
+                retrain_and_eval(
+                    chrom,
+                    dataset=dataset,
+                    epochs=retrain_epochs,
+                    batch_size=batch_size,
+                    val_size=val_size,
+                    num_workers=num_workers,
+                    device=device,
+                    seed=s,
+                )
+            )
             done_jobs += 1
         rows.append({
             "pick_id": int(i),

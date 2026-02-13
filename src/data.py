@@ -6,9 +6,33 @@ from torchvision import datasets, transforms
 
 _CIFAR10_CACHE = {}
 
-def cifar10_loaders(batch_size=128, val_size=5000, num_workers=2, seed=0, device="cpu"):
-    key = (int(batch_size), int(val_size), int(num_workers), int(seed), str(device))
-    if key in _CIFAR10_CACHE:
+
+def cifar10_loaders(
+    batch_size=128,
+    val_size=5000,
+    num_workers=2,
+    seed=0,
+    data_root="./data",
+    pin_memory=None,
+    persistent_workers=True,
+    use_cache=True,
+    device=None,
+):
+    if pin_memory is None:
+        if device is not None:
+            pin_memory = str(device).startswith("cuda")
+        else:
+            pin_memory = torch.cuda.is_available()
+    key = (
+        int(batch_size),
+        int(val_size),
+        int(num_workers),
+        int(seed),
+        str(data_root),
+        bool(pin_memory),
+        bool(persistent_workers),
+    )
+    if use_cache and key in _CIFAR10_CACHE:
         return _CIFAR10_CACHE[key]
 
     tfm_train = transforms.Compose([
@@ -23,19 +47,18 @@ def cifar10_loaders(batch_size=128, val_size=5000, num_workers=2, seed=0, device
     ])
 
     print("[DATA] Preparing CIFAR-10 dataset (download may take time on first run)...", flush=True)
-    ds = datasets.CIFAR10(root="./data", train=True, download=True, transform=tfm_train)
+    ds = datasets.CIFAR10(root=data_root, train=True, download=True, transform=tfm_train)
     train_ds, val_ds = random_split(ds, [len(ds)-val_size, val_size],
                                     generator=torch.Generator().manual_seed(seed))
     val_ds.dataset.transform = tfm_test
 
-    pin = str(device).startswith("cuda")
     loader_kwargs = {
         "batch_size": batch_size,
         "num_workers": num_workers,
-        "pin_memory": pin,
+        "pin_memory": pin_memory,
     }
     if num_workers > 0:
-        loader_kwargs["persistent_workers"] = True
+        loader_kwargs["persistent_workers"] = persistent_workers
 
     train_loader = DataLoader(train_ds, shuffle=True, **loader_kwargs)
     val_loader = DataLoader(val_ds, shuffle=False, **loader_kwargs)
@@ -43,5 +66,6 @@ def cifar10_loaders(batch_size=128, val_size=5000, num_workers=2, seed=0, device
         f"[DATA] CIFAR-10 ready | train={len(train_ds)} | val={len(val_ds)} | batch_size={batch_size}",
         flush=True,
     )
-    _CIFAR10_CACHE[key] = (train_loader, val_loader)
-    return _CIFAR10_CACHE[key]
+    if use_cache:
+        _CIFAR10_CACHE[key] = (train_loader, val_loader)
+    return train_loader, val_loader

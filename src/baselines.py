@@ -15,7 +15,19 @@ def manual_cnn_chrom():
         "lr": 1e-3,
     })
 
-def grid_tune_training(base_chrom, activations, optimizers, lrs, epochs=6, device="cpu", seed=0, max_combos=None):
+def grid_tune_training(
+    base_chrom,
+    activations,
+    optimizers,
+    lrs,
+    epochs=6,
+    batch_size=128,
+    val_size=5000,
+    num_workers=2,
+    device="cpu",
+    seed=0,
+    max_combos=None,
+):
     results = []
     combos = list(itertools.product(activations, optimizers, lrs))
     if max_combos is not None:
@@ -33,6 +45,9 @@ def grid_tune_training(base_chrom, activations, optimizers, lrs, epochs=6, devic
         neg_acc, params, flops = evaluate_individual(
             chrom,
             epochs=epochs,
+            batch_size=batch_size,
+            val_size=val_size,
+            num_workers=num_workers,
             device=device,
             seed=seed,
             progress_label=f"baseline combo {idx}/{total}",
