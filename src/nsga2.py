@@ -3,6 +3,7 @@ import json
 import time
 import pickle
 import random
+import hashlib
 from typing import Optional, Tuple
 
 import numpy as np
@@ -33,24 +34,67 @@ def _progress_bar(done: int, total: int, width: int = 30) -> str:
     filled = int(width * ratio)
     return f"[{'#' * filled}{'.' * (width - filled)}] {done}/{total} ({ratio * 100:5.1f}%)"
 
-def evaluate_individual(ind, epochs=6, batch_size=128, val_size=5000, device="cpu", seed=0, progress_label=None):
+
+def _chrom_key(ind) -> str:
+    return hashlib.md5(json.dumps(dict(ind), sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def evaluate_individual(
+    ind,
+    epochs=6,
+    batch_size=128,
+    val_size=5000,
+    device="cpu",
+    seed=0,
+    progress_label=None,
+    train_loader=None,
+    val_loader=None,
+    cache=None,
+    flops_cache=None,
+    batch_progress=False,
+):
     random.seed(seed)
     import torch
     torch.manual_seed(seed)
 
-    train_loader, val_loader = cifar10_loaders(batch_size=batch_size, val_size=val_size, seed=seed)
+    key = _chrom_key(ind)
+    if cache is not None and key in cache:
+        return cache[key]
+
+    if train_loader is None or val_loader is None:
+        train_loader, val_loader = cifar10_loaders(
+            batch_size=batch_size,
+            val_size=val_size,
+            seed=seed,
+            device=device,
+        )
     model = CNNFromChromosome(ind, num_classes=10)
     params = count_params(model)
-    flops = compute_flops(model, device=device)
+    if flops_cache is not None and key in flops_cache:
+        flops = flops_cache[key]
+    else:
+        flops = compute_flops(model, device=device)
+        if flops_cache is not None:
+            flops_cache[key] = flops
 
     if progress_label:
         print(f"[NSGA2] {progress_label} | training started", flush=True)
-    train_epochs(model, train_loader, ind, epochs=epochs, device=device, progress_label=progress_label)
+    train_epochs(
+        model,
+        train_loader,
+        ind,
+        epochs=epochs,
+        device=device,
+        progress_label=progress_label if batch_progress else None,
+    )
     val_acc = accuracy(model, val_loader, device=device)
     if progress_label:
         print(f"[NSGA2] {progress_label} | validation acc={val_acc:.4f}", flush=True)
 
-    return (-val_acc, params, flops)
+    out = (-val_acc, params, flops)
+    if cache is not None:
+        cache[key] = out
+    return out
 
 def _ensure_dir(p: Optional[str]):
     if p:
@@ -80,6 +124,7 @@ def run_nsga2(
     log_dir: Optional[str] = None,
     run_id: Optional[str] = None,
     checkpoint_every: int = 1,
+    batch_progress: bool = False,
 ) -> Tuple[list, list, str]:
     """NSGA-II with optional runtime logging + checkpoints."""
     random.seed(seed)
@@ -110,6 +155,14 @@ def run_nsga2(
         log_jsonl = os.path.join(log_dir, run_id, "log.jsonl")
 
     pop = toolbox.population(n=pop_size)
+    train_loader, val_loader = cifar10_loaders(
+        batch_size=batch_size,
+        val_size=val_size,
+        seed=seed,
+        device=device,
+    )
+    eval_cache = {}
+    flops_cache = {}
     total_evals = pop_size * (ngen + 1)
     eval_done = 0
     print(f"[NSGA2] Seed={seed} | population={pop_size} | generations={ngen} | total evaluations={total_evals}")
@@ -117,7 +170,18 @@ def run_nsga2(
     t0 = time.time()
     for idx, ind in enumerate(pop, start=1):
         ind.fitness.values = evaluate_individual(
-            ind, epochs, batch_size, val_size, device, seed, progress_label=f"seed{seed} init ind {idx}/{pop_size}"
+            ind,
+            epochs,
+            batch_size,
+            val_size,
+            device,
+            seed,
+            progress_label=f"seed{seed} init ind {idx}/{pop_size}",
+            train_loader=train_loader,
+            val_loader=val_loader,
+            cache=eval_cache,
+            flops_cache=flops_cache,
+            batch_progress=batch_progress,
         )
         eval_done += 1
         print(
@@ -160,7 +224,18 @@ def run_nsga2(
 
         for idx, ind in enumerate(offspring, start=1):
             ind.fitness.values = evaluate_individual(
-                ind, epochs, batch_size, val_size, device, seed, progress_label=f"seed{seed} gen{gen} ind {idx}/{len(offspring)}"
+                ind,
+                epochs,
+                batch_size,
+                val_size,
+                device,
+                seed,
+                progress_label=f"seed{seed} gen{gen} ind {idx}/{len(offspring)}",
+                train_loader=train_loader,
+                val_loader=val_loader,
+                cache=eval_cache,
+                flops_cache=flops_cache,
+                batch_progress=batch_progress,
             )
             eval_done += 1
             print(

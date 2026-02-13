@@ -1,12 +1,21 @@
 
 import torch
-from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, random_split
+from torchvision import datasets, transforms
 
 from .model import CNNFromChromosome
 from .train import train_epochs, accuracy
 
-def make_loaders(dataset="cifar100", batch_size=128, val_size=5000, num_workers=2, seed=0):
+
+_TRANSFER_CACHE = {}
+
+
+def make_loaders(dataset="cifar100", batch_size=128, val_size=5000, num_workers=2, seed=0, device="cpu"):
+    dataset = dataset.lower()
+    key = (dataset, int(batch_size), int(val_size), int(num_workers), int(seed), str(device))
+    if key in _TRANSFER_CACHE:
+        return _TRANSFER_CACHE[key]
+
     dataset = dataset.lower()
     if dataset == "cifar100":
         tfm_train = transforms.Compose([
@@ -46,17 +55,31 @@ def make_loaders(dataset="cifar100", batch_size=128, val_size=5000, num_workers=
     train_ds, val_ds = random_split(ds, [len(ds)-val_size, val_size],
                                     generator=torch.Generator().manual_seed(seed))
     val_ds.dataset.transform = tfm_test
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    pin = str(device).startswith("cuda")
+    loader_kwargs = {
+        "batch_size": batch_size,
+        "num_workers": num_workers,
+        "pin_memory": pin,
+    }
+    if num_workers > 0:
+        loader_kwargs["persistent_workers"] = True
+    train_loader = DataLoader(train_ds, shuffle=True, **loader_kwargs)
+    val_loader = DataLoader(val_ds, shuffle=False, **loader_kwargs)
     print(
         f"[TRANSFER] {dataset} ready | train={len(train_ds)} | val={len(val_ds)} | batch_size={batch_size}",
         flush=True,
     )
-    return train_loader, val_loader, num_classes
+    _TRANSFER_CACHE[key] = (train_loader, val_loader, num_classes)
+    return _TRANSFER_CACHE[key]
 
 def retrain_and_eval(chrom, dataset="cifar100", epochs=50, batch_size=128, device="cpu", seed=0):
     torch.manual_seed(seed)
-    train_loader, val_loader, num_classes = make_loaders(dataset, batch_size=batch_size, seed=seed)
+    train_loader, val_loader, num_classes = make_loaders(
+        dataset,
+        batch_size=batch_size,
+        seed=seed,
+        device=device,
+    )
     model = CNNFromChromosome(chrom, in_ch=3, num_classes=num_classes).to(device)
     train_epochs(
         model,
